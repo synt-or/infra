@@ -131,6 +131,7 @@
   boot.extraModprobeConfig = "options hid_apple iso_layout=0";
   console.keyMap = "mac-fr";
   users.users.lambda = { isNormalUser = true; extraGroups = [ "wheel" ];};
+  hardware.asahi.peripheralFirmwareDirectory = /boot/asahi;
 
 
 }
