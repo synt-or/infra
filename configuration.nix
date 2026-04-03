@@ -130,7 +130,15 @@
   networking.wireless.iwd.settings.General.EnableNetworkConfiguration = true;
   boot.extraModprobeConfig = "options hid_apple iso_layout=0";
   console.keyMap = "mac-fr";
-  users.users.lambda = { isNormalUser = true; extraGroups = [ "wheel" ];};
+  # users.users.lambda = { isNormalUser = true; extraGroups = [ "wheel" ];};
+  users.users.lambda = {
+    isNormalUser = true;
+    extraGroups = [ "wheel" ];
+    openssh.authorizedKeys.keys = [
+      "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBI/eFj3EA31vrOmiTQ0euOP2IjjdL+3YyWMT51ZJE3LqO0P0eiqrKQtIcQQ7Nm+wvI0JBQqMexkrNTOZ6UChGPE="
+    ];
+  };
+
   hardware.asahi.peripheralFirmwareDirectory = /boot/asahi;
 
 
