@@ -42,7 +42,7 @@
     ];
   };
 
-  hardware.asahi.peripheralFirmwareDirectory = /boot/asahi;
+  hardware.asahi.peripheralFirmwareDirectory = ./firmware;
 
   system.stateVersion = "26.05";
 }
