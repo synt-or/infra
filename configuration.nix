@@ -13,6 +13,9 @@
   boot.extraModprobeConfig = "options hid_apple iso_layout=1";
   console.keyMap = "mac-fr";
 
+  # Emergency shell accessible dans l'initrd
+  boot.initrd.systemd.emergencyAccess = true;
+
   # Hostname
   networking.hostName = "nixos";
 
@@ -44,6 +47,23 @@
     };
   };
 
+  # SSH client — stub YubiKey sk résidente placé déclarativement
+  system.activationScripts.sshStub = ''
+    mkdir -p /home/lambda/.ssh
+    cp ${./ssh/id_ed25519_sk_rk} /home/lambda/.ssh/id_ed25519_sk_rk
+    cp ${./ssh/id_ed25519_sk_rk.pub} /home/lambda/.ssh/id_ed25519_sk_rk.pub
+    chmod 600 /home/lambda/.ssh/id_ed25519_sk_rk
+    chmod 644 /home/lambda/.ssh/id_ed25519_sk_rk.pub
+    chown -R lambda:users /home/lambda/.ssh
+    if ! grep -q 'id_ed25519_sk_rk' /home/lambda/.ssh/config 2>/dev/null; then
+      echo 'IdentityFile ~/.ssh/id_ed25519_sk_rk' >> /home/lambda/.ssh/config
+      chown lambda:users /home/lambda/.ssh/config
+    fi
+  '';
+
+  # SSH agent
+  programs.ssh.startAgent = true;
+
   # Git config globale déclarative
   programs.git = {
     enable = true;
@@ -51,6 +71,7 @@
       user.name = "synt-or";
       user.email = "syntor@protonmail.com";
       gpg.format = "ssh";
+      user.signingKey = "key::sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29tAAAAIIxIpGAQxp4EFzLAqYrKnjY5BFyYqPGFhLPZ6v907PJ3AAAABHNzaDo= ssh:";
       commit.gpgsign = true;
       init.defaultBranch = "main";
     };
