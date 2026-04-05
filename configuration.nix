@@ -47,11 +47,18 @@
   nixpkgs.config.allowUnfree = true;
 
   # Paquets
-  environment.systemPackages = with pkgs; [
+	environment.systemPackages = with pkgs; [
     git
     vim
-		claude-code
+    (claude-code.overrideAttrs (old: rec {
+      version = "2.1.89";
+      src = fetchurl {
+        url = "https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-${version}.tgz";
+        hash = "";
+      };
+    }))
   ];
+
 
   # SSH serveur
   services.openssh = {
