@@ -50,15 +50,10 @@
 	environment.systemPackages = with pkgs; [
     git
     vim
-    (claude-code.overrideAttrs (old: rec {
-      version = "2.1.89";
-      src = fetchurl {
-        url = "https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-${version}.tgz";
-        hash = "sha256-aA41ABsktgT1iVjjoyS7dYvjwGnAo/iVhRViVvF6nIc=";
-      };
-    }))
   ];
 
+	# Pour permettre la compatibilité avec les vinaires compilés FHS
+	programs.nix-ld.enable = true; 
 
   # SSH serveur
   services.openssh = {
