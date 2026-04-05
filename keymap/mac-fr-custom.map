@@ -1,20 +1,6 @@
-keymaps 0-15
-include "mac-fr"
-
-# @ key (keycode 41) : @ normal, # avec shift
 keycode 41 = at numbersign
-
-# ` key (keycode 43) : ` au lieu de *
 keycode 43 = grave asciitilde
-
-# Option + N = ~
 altgr keycode 49 = asciitilde
-
-# Option + L = |
 altgr keycode 38 = bar
-
-# Shift + $ = *
 shift keycode 27 = asterisk
-
-# Option + $ = €
 altgr keycode 27 = U+20AC
