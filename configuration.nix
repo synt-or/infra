@@ -24,7 +24,6 @@
   };
 
 
-
   # Emergency shell accessible dans l'initrd
   boot.initrd.systemd.emergencyAccess = true;
 
@@ -44,10 +43,14 @@
   # Pas de swap
   swapDevices = [ ];
 
+  # Autoriser les paquets unfree (Claude Code)
+  nixpkgs.config.allowUnfree = true;
+
   # Paquets
   environment.systemPackages = with pkgs; [
     git
     vim
+		claude-code
   ];
 
   # SSH serveur
