@@ -29,7 +29,7 @@
   boot.initrd.systemd.emergencyAccess = true;
 
   # Hostname
-  networking.hostName = "nixos";
+  networking.hostName = "mac";
 
   # WiFi — iwd avec DHCP intégré
   networking.wireless.iwd = {
