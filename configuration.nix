@@ -44,6 +44,18 @@
     };
   };
 
+  # Git config globale déclarative
+  programs.git = {
+    enable = true;
+    config = {
+      user.name = "synt-or";
+      user.email = "syntor@protonmail.com";
+      gpg.format = "ssh";
+      commit.gpgsign = true;
+      init.defaultBranch = "main";
+    };
+  };
+
   # Utilisateur
   users.users.lambda = {
     isNormalUser = true;
