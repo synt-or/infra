@@ -1,73 +1,70 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, … }:
 
 {
-  imports =
-    [ ./hardware-configuration.nix
-    ];
+imports =
+[ ./hardware-configuration.nix
+];
 
-  # Boot
-  boot.loader.systemd-boot.enable = true;
-  boot.loader.efi.canTouchEfiVariables = false;
-  boot.extraModprobeConfig = "options hid_apple iso_layout=0";
+# Boot
 
-  # Console
-  console.keyMap = "fr";
-  i18n.defaultLocale = "fr_FR.UTF-8";
+boot.loader.systemd-boot.enable = true;
+boot.loader.efi.canTouchEfiVariables = false;
 
-  # Hostname
-  networking.hostName = "nixos";
+# Clavier Mac ISO français
 
-  # WiFi — iwd avec DHCP intégré
-  networking.wireless.iwd = {
-    enable = true;
-    settings.General.EnableNetworkConfiguration = true;
-  };
+boot.extraModprobeConfig = “options hid_apple iso_layout=1”;
+console.keyMap = “mac-fr”;
 
-  # Timezone
-  time.timeZone = "Europe/Paris";
+# Hostname
 
-  # Pas de swap
-  swapDevices = [ ];
+networking.hostName = “nixos”;
 
-  # Paquets
-  environment.systemPackages = with pkgs; [
-    git
-    vim
-    openssh
-  ];
+# WiFi — iwd avec DHCP intégré
 
-  # SSH serveur
-  services.openssh = {
-    enable = true;
-    settings = {
-      PasswordAuthentication = false;
-      PermitRootLogin = "no";
-    };
-  };
+networking.wireless.iwd = {
+enable = true;
+settings.General.EnableNetworkConfiguration = true;
+};
 
-  # Git config globale déclarative
-  programs.git = {
-    enable = true;
-    config = {
-      user.name = "synt-or";
-      user.email = "syntor@protonmail.com";
-      gpg.format = "ssh";
-      commit.gpgsign = true;
-      init.defaultBranch = "main";
-    };
-  };
+# Timezone et locale
 
-  # Utilisateur
-  users.users.lambda = {
-    isNormalUser = true;
-    extraGroups = [ "wheel" ];
-    openssh.authorizedKeys.keys = [
-      "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBI/eFj3EA31vrOmiTQ0euOP2IjjdL+3YyWMT51ZJE3LqO0P0eiqrKQtIcQQ7Nm+wvI0JBQqMexkrNTOZ6UChGPE="
-    ];
-  };
+time.timeZone = “Europe/Paris”;
+i18n.defaultLocale = “fr_FR.UTF-8”;
 
-  # Firmware Asahi
-  hardware.asahi.peripheralFirmwareDirectory = ./firmware;
+# Pas de swap
 
-  system.stateVersion = "26.05";
+swapDevices = [ ];
+
+# Paquets
+
+environment.systemPackages = with pkgs; [
+git
+vim
+];
+
+# SSH serveur
+
+services.openssh = {
+enable = true;
+settings = {
+PasswordAuthentication = false;
+PermitRootLogin = “no”;
+};
+};
+
+# Utilisateur
+
+users.users.lambda = {
+isNormalUser = true;
+extraGroups = [ “wheel” ];
+openssh.authorizedKeys.keys = [
+“ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBI/eFj3EA31vrOmiTQ0euOP2IjjdL+3YyWMT51ZJE3LqO0P0eiqrKQtIcQQ7Nm+wvI0JBQqMexkrNTOZ6UChGPE=”
+];
+};
+
+# Firmware Asahi
+
+hardware.asahi.peripheralFirmwareDirectory = ./firmware;
+
+system.stateVersion = “26.05”;
 }
