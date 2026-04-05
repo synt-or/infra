@@ -11,7 +11,18 @@
 
   # Clavier Mac ISO français
   boot.extraModprobeConfig = "options hid_apple iso_layout=1";
+  # Chargement du keymap custom après le keymap de base
   console.keyMap = "mac-fr";
+  systemd.services.custom-keymap = {
+    description = "Custom Mac FR keymap fixes";
+    wantedBy = [ "multi-user.target" ];
+    after = [ "systemd-vconsole-setup.service" ];
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart = "${pkgs.kbd}/bin/loadkeys ${./keymap/mac-fr-custom.map}";
+    };
+  };
+
 
   # Emergency shell accessible dans l'initrd
   boot.initrd.systemd.emergencyAccess = true;
