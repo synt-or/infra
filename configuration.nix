@@ -105,6 +105,16 @@
     ];
   };
 
+  # Règles udev pour accès FIDO2 en session non-locale (SSH)
+  services.udev.extraRules = ''
+    KERNEL=="hidraw*", SUBSYSTEM=="hidraw", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+  '';
+
+  # Ajouter plugdev au groupe de lambda
+  users.groups.plugdev = {};
+  users.users.lambda.extraGroups = [ "wheel" "plugdev" ];
+
+
   # Firmware Asahi
   hardware.asahi.peripheralFirmwareDirectory = ./firmware;
 
