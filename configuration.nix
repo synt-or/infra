@@ -19,9 +19,10 @@
     after = [ "systemd-vconsole-setup.service" ];
     serviceConfig = {
       Type = "oneshot";
-      ExecStart = "${pkgs.kbd}/bin/loadkeys ${./keymap/mac-fr-custom.map}";
+      ExecStart = "${pkgs.kbd}/bin/loadkeys -q ${./keymap/mac-fr-custom.map}";
     };
   };
+
 
 
   # Emergency shell accessible dans l'initrd
