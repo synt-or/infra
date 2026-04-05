@@ -70,6 +70,10 @@
       echo 'IdentityFile ~/.ssh/id_ed25519_sk_rk' >> /home/lambda/.ssh/config
       chown lambda:users /home/lambda/.ssh/config
     fi
+    if ! grep -q 'AddKeysToAgent' /home/lambda/.ssh/config 2>/dev/null; then
+      echo 'AddKeysToAgent yes' >> /home/lambda/.ssh/config
+      chown lambda:users /home/lambda/.ssh/config
+    fi
   '';
 
   # SSH agent
