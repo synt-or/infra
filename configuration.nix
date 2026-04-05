@@ -99,7 +99,7 @@
   # Utilisateur
   users.users.lambda = {
     isNormalUser = true;
-    extraGroups = [ "wheel" ];
+    extraGroups = [ "wheel" "plugdev" ];
     openssh.authorizedKeys.keys = [
       "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBI/eFj3EA31vrOmiTQ0euOP2IjjdL+3YyWMT51ZJE3LqO0P0eiqrKQtIcQQ7Nm+wvI0JBQqMexkrNTOZ6UChGPE="
     ];
@@ -109,11 +109,8 @@
   services.udev.extraRules = ''
     KERNEL=="hidraw*", SUBSYSTEM=="hidraw", MODE="0660", GROUP="plugdev", TAG+="uaccess"
   '';
-
-  # Ajouter plugdev au groupe de lambda
   users.groups.plugdev = {};
-  users.users.lambda.extraGroups = [ "wheel" "plugdev" ];
-
+  
 
   # Firmware Asahi
   hardware.asahi.peripheralFirmwareDirectory = ./firmware;
