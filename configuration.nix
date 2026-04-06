@@ -8,6 +8,7 @@
   # Boot
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = false;
+  boot.consoleLogLevel = 3;
 
   # Clavier Mac ISO français
   boot.extraModprobeConfig = "options hid_apple iso_layout=1";
@@ -26,6 +27,50 @@
 
   # Emergency shell accessible dans l'initrd
   boot.initrd.systemd.emergencyAccess = true;
+
+  # Hardening — Phase 1
+  boot.kernelParams = [ "lockdown=confidentiality" ];
+  security.protectKernelImage = true;
+  boot.kernel.sysctl = {
+    # Désactiver Magic SysRq (compatible avec lockdown)
+    "kernel.sysrq" = 0;
+    # Restreindre dmesg aux processus privilégiés
+    "kernel.dmesg_restrict" = 1;
+    # Masquer les pointeurs kernel dans /proc
+    "kernel.kptr_restrict" = 2;
+    # Désactiver BPF pour les non-root
+    "kernel.unprivileged_bpf_disabled" = 1;
+    # Hardening BPF JIT
+    "net.core.bpf_jit_harden" = 2;
+    # Bloquer les user namespaces (surface d'attaque kernel — CVE-2022-0185, CVE-2023-32233)
+    "user.max_user_namespaces" = 0;
+    # Restreindre perf_event aux root
+    "kernel.perf_event_paranoid" = 3;
+    # Désactiver ptrace sauf root avec CAP_SYS_PTRACE
+    "kernel.yama.ptrace_scope" = 2;
+    # Réseau — anti-spoofing et durcissement
+    "net.ipv4.conf.all.rp_filter" = 1;
+    "net.ipv4.conf.default.rp_filter" = 1;
+    "net.ipv4.conf.all.accept_redirects" = 0;
+    "net.ipv4.conf.default.accept_redirects" = 0;
+    "net.ipv6.conf.all.accept_redirects" = 0;
+    "net.ipv6.conf.default.accept_redirects" = 0;
+    "net.ipv4.conf.all.send_redirects" = 0;
+    "net.ipv4.conf.default.send_redirects" = 0;
+    "net.ipv4.icmp_echo_ignore_broadcasts" = 1;
+    "net.ipv4.conf.all.accept_source_route" = 0;
+    "net.ipv6.conf.all.accept_source_route" = 0;
+    # SYN flood protection
+    "net.ipv4.tcp_syncookies" = 1;
+  };
+
+  # Firewall strict — tout fermé par défaut
+  networking.firewall = {
+    enable = true;
+    # SSH ouvert — à restreindre à l'interface Tailscale en Phase 1.8
+    allowedTCPPorts = [ 22 ];
+    allowedUDPPorts = [ ];
+  };
 
   # Hostname
   networking.hostName = "mac";
@@ -69,16 +114,28 @@
     };
 
 
-  # SSH serveur
+  # SSH serveur — hardened
   services.openssh = {
     enable = true;
     settings = {
       PasswordAuthentication = false;
+      KbdInteractiveAuthentication = false;
       PermitRootLogin = "no";
+      X11Forwarding = false;
+      AllowAgentForwarding = false;
+      AllowTcpForwarding = false;
+      StreamLocalForwarding = "no";
+      MaxAuthTries = 3;
     };
   };
 
-  # SSH client — stub YubiKey sk résidente placé déclarativement (à nixifier)
+  # SSH client — config déclarative
+  programs.ssh.extraConfig = ''
+    IdentityFile ~/.ssh/id_ed25519_sk_rk
+    AddKeysToAgent yes
+  '';
+
+  # SSH client — stub YubiKey sk résidente (copie impérative, à remplacer par tmpfiles.rules en 1.16)
   system.activationScripts.sshStub = ''
     mkdir -p /home/lambda/.ssh
     cp ${./ssh/id_ed25519_sk_rk} /home/lambda/.ssh/id_ed25519_sk_rk
@@ -86,14 +143,6 @@
     chmod 600 /home/lambda/.ssh/id_ed25519_sk_rk
     chmod 644 /home/lambda/.ssh/id_ed25519_sk_rk.pub
     chown -R lambda:users /home/lambda/.ssh
-    if ! grep -q 'id_ed25519_sk_rk' /home/lambda/.ssh/config 2>/dev/null; then
-      echo 'IdentityFile ~/.ssh/id_ed25519_sk_rk' >> /home/lambda/.ssh/config
-      chown lambda:users /home/lambda/.ssh/config
-    fi
-    if ! grep -q 'AddKeysToAgent' /home/lambda/.ssh/config 2>/dev/null; then
-      echo 'AddKeysToAgent yes' >> /home/lambda/.ssh/config
-      chown lambda:users /home/lambda/.ssh/config
-    fi
   '';
 
   # Ajout automatique des clés SSH à l'agent au chargement d'un terminal
