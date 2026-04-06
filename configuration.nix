@@ -43,6 +43,9 @@
   # Pas de swap
   swapDevices = [ ];
 
+  # Ajout des fonctionnalités expérimentales pour les commandes nix et les flakes
+  nix.settings.experimental-features = [ "nix-command" "flakes" ];
+
   # Autoriser les paquets unfree (Claude Code)
   nixpkgs.config.allowUnfree = true;
 
