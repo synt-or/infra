@@ -124,7 +124,7 @@
       X11Forwarding = false;
       AllowAgentForwarding = false;
       AllowTcpForwarding = false;
-      StreamLocalForwarding = "no";
+      AllowStreamLocalForwarding = false;
       MaxAuthTries = 3;
     };
   };
