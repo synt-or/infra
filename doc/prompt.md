@@ -1,165 +1,75 @@
-# Instructions pour Claude Code
+# Instructions pour Claude Code — Compléments
 
-Tu travailles sur le repo `/data/infra`, une infrastructure NixOS déclarative pour un MacBook Pro M1 Pro via Asahi Linux. Lis d’abord CLAUDE.md, TODO.md, et les ADR existantes dans doc/adr/ pour comprendre le contexte.
-
-Tu dois créer les fichiers suivants et mettre à jour les références dans CLAUDE.md. Tous les détails techniques ci-dessous ont été vérifiés contre les sources primaires (documentation Asahi, man pages kernel, code source NixOS, documentation LUKS2, communauté forensique).
+Lis CLAUDE.md et les ADR existantes dans doc/adr/ pour le contexte. Trois éléments manquants à intégrer.
 
 -----
 
-## 1. Créer `doc/MATRICE-ATTAQUE.md`
+## 1. Enrichir `doc/adr/0003-passphrase-split-bitwarden-iphone.md`
 
-Ce fichier documente tous les vecteurs d’attaque connus classés par contexte, avec leur description détaillée et leur mitigation. C’est la pièce maîtresse de la documentation de sécurité.
+Ajouter une section “Analyse d’entropie” après la section “Décision” avec les éléments suivants :
 
-### Contenu à inclure :
+La passphrase est composée de deux parties concaténées.
 
-**Catégorie 1 — Machine déverrouillée et en fonctionnement**
+Partie diceware : 7 mots de la liste EFF (7776 mots, log₂(7776) ≈ 12.9 bits par mot = ~90.3 bits) + 1 mot absent de la liste (conservativement un mot anglais courant parmi ~50 000, log₂(50000) ≈ 15.6 bits). Total partie diceware : ~106 bits.
 
-Vecteur : Exploit kernel direct. Une vulnérabilité dans le kernel Linux (buffer overflow, use-after-free dans un driver) donne à l’attaquant une exécution en ring 0, en dessous du lockdown. Il peut lire la clé LUKS directement depuis les structures dm-crypt en mémoire kernel. C’est le vecteur le plus réaliste. Mitigation : kernel à jour, surface d’attaque réduite (pas de services inutiles), AppArmor sur les services exposés.
+Partie random : 8 caractères truly random sur l’alphabet ASCII imprimable (95 caractères, log₂(95) ≈ 6.6 bits par caractère = ~52.6 bits).
 
-Vecteur : Attaque DMA via Thunderbolt. Un appareil malveillant branché sur le port USB-C/Thunderbolt tente de lire la RAM via DMA. Mitigation : le DART (Device Address Resolution Table, l’IOMMU Apple Silicon) filtre les accès DMA par périphérique via le device tree. Chaque périphérique est dans sa propre “cage” mémoire et ne peut accéder qu’aux buffers que le kernel lui a assignés. Le DART est actif par défaut, géré par le driver apple-dart (CONFIG_APPLE_DART=y). Ne pas brancher d’appareils inconnus quand la machine est déverrouillée.
+Total : ~158 bits d’entropie. C’est au-delà du seuil post-quantique (128 bits après réduction par Grover).
 
-Vecteur : Shutdown nocturne (modification config + rebuild + shutdown). Un attaquant root modifie configuration.nix pour retirer le lockdown, fait un nixos-rebuild, déclenche un shutdown à 3h du matin. L’utilisateur saisit la passphrase LUKS au réveil, croyant à un crash. Le kernel compromis démarre avec la bénédiction de l’utilisateur. Mitigation : vérification des hashes de la partition EFI depuis macOS après tout reboot inattendu, monitoring de l’uptime, safe-rebuild.sh qui vérifie les signatures.
+Analyse de résistance résiduelle si Bitwarden est compromis (partie diceware exposée, partie random seule) : avec 8 caractères random (~53 bits) et Argon2id à 5 secondes par tentative, un cluster de 1000 GPU A100 (80 Go VRAM chacun, ~80 000 tentatives/seconde grâce à la résistance mémoire d’Argon2id) mettrait environ 28 500 ans. Suffisant aujourd’hui, mais un attaquant étatique en 2056 avec ~10⁹ tentatives/seconde le casserait en ~2.3 ans.
 
-**Catégorie 2 — Machine en veille (s2idle)**
+Recommandation (déjà dans TODO.md Phase 2) : augmenter la partie random à 10-12 caractères (~66-79 bits résiduels). Avec 10 caractères, l’attaquant étatique de 2056 mettrait ~29 000 ans. Avec 12 caractères, ~30 milliards d’années.
 
-Vecteur : Clé LUKS en RAM pendant la veille. s2idle maintient la RAM alimentée, la clé LUKS est présente. Statut : risque formellement accepté. Justification : le risque en s2idle est un sous-ensemble strict du risque en fonctionnement normal — même clé en RAM, mais espace utilisateur gelé (surface d’attaque réduite par rapport à une machine active avec services réseau). Protections : lockdown=confidentiality bloque l’extraction userspace, DART bloque le DMA, SiP élimine le cold boot. Seul vecteur résiduel : exploit kernel 0-day, déjà accepté comme risque inhérent au fonctionnement. Le shutdown automatique après 30 min d’inactivité borne la durée d’exposition. Voir ADR 0002 pour la justification complète.
-
-**Catégorie 3 — Machine éteinte (shutdown complet)**
-
-Vecteur : Remplacement kernel/initrd sur partition EFI. L’attaquant avec accès physique modifie le kernel ou l’initrd sur la partition EFI non chiffrée. Au prochain boot, le kernel/initrd piégé capture la clé LUKS ou les credentials FIDO2. Mitigation : vérification des hashes depuis macOS (SSV garantit l’intégrité de l’environnement de vérification), signature du kernel avec clé personnelle dans le SEP.
-
-Vecteur : Cold boot. L’attaquant tente de refroidir la RAM et d’en extraire le contenu. Statut : éliminé par la physique sur Apple Silicon. La RAM LPDDR5 est intégrée au SiP (system-in-package). Les dies de RAM sont empilés directement sur ou à côté du die processeur. Le dessoudage nécessiterait de la chaleur qui accélère la décharge des condensateurs DRAM et détruit les données. Le froid nécessaire à la préservation et la chaleur nécessaire à l’extraction sont mutuellement exclusifs. Aucune recherche publiée n’a démontré ni même tenté un cold boot sur Apple Silicon. La communauté forensique (Cellebrite, Magnet, SUMURI, ADF) s’est intégralement tournée vers l’acquisition logique.
-
-Vecteur : Dessoudage des puces NAND. L’attaquant extrait physiquement les puces de stockage. Sans la clé LUKS (disparue de la RAM par shutdown), il obtient du bruit chiffré AES-256 (chiffrement hardware permanent Apple, toujours actif, lié au SoC) + LUKS2 par-dessus. Double chiffrement, bruteforce impossible.
-
-Vecteur : DFU + réinstallation (evil maid avancée). L’attaquant utilise le mode DFU pour effacer et réinstaller un OS piégé. Contremesures : Find My Mac / Activation Lock bloque le Setup Assistant, toutes les données précédentes sont détruites cryptographiquement (pas de récupération pour l’attaquant), l’utilisateur retrouve un Mac vierge (signal d’alerte évident).
-
-**Catégorie 4 — Chaîne de déploiement**
-
-Vecteur : Push malveillant sur GitHub. Un attaquant obtient un accès push au repo de config, modifie configuration.nix. Le prochain nixos-rebuild déploie la config malveillante. Mitigation : clé SSH sk résidente pour auth GitHub (push impossible sans YubiKey + touch). Wrapper safe-rebuild.sh vérifie la signature du commit avant de builder.
-
-Vecteur : Compromission de GitHub. Employé malveillant, faille infra, injonction judiciaire — modification silencieuse du repo. Mitigation : safe-rebuild.sh vérifie la signature du commit (un commit injecté par GitHub ne serait pas signé par la clé sk). Limitation : un replay d’un ancien commit signé ne serait pas détecté par la signature seule. Le –ff-only et le log d’audit atténuent.
-
-Vecteur : Rebuild local malveillant. Attaquant root pointe nixos-rebuild vers un flake arbitraire. Mitigation : safe-rebuild.sh comme convention + log d’audit. Root peut contourner le wrapper — mitigation ultime : vérification des hashes depuis macOS post-reboot + signature kernel via SEP/Touch ID.
-
-Vecteur : Empoisonnement du flake.lock. Attaquant modifie flake.lock pour pointer vers un nixpkgs malveillant, signe le commit avec une clé compromise. Mitigation : revue humaine du diff de flake.lock avant chaque commit de mise à jour nixpkgs. Le wrapper ne détecte pas ce vecteur automatiquement — limite documentée.
-
-Vecteur : nixos-rebuild ne vérifie pas les signatures. Comportement natif : git fetch + build aveugle, aucune vérification de signature. Mitigation : safe-rebuild.sh comble ce trou (voir ADR 0007).
-
-**Catégorie 5 — Supply chain et hors machine**
-
-Vecteur : Compromission kernel/initrd via la build chain. Un paquet NixOS ou une dépendance contient un rootkit kernel. Mitigation : flake.lock épinglé, commits signés, reproductibilité des builds NixOS.
-
-Vecteur : Compromission du serveur de sauvegarde. Si les sauvegardes ne sont pas chiffrées côté client, l’attaquant contourne toute la sécurité du Mac. Mitigation : chiffrement restic/borg côté client avec clé sur YubiKey.
-
-Vecteur : Ingénierie sociale / coercition. Convaincre ou contraindre le propriétaire de déverrouiller. Aucune mitigation technique — problème humain. Le multi-facteur (objet + biométrie/PIN + passphrase) rend la coercition plus complexe.
-
-### Format attendu :
-
-Tableau par catégorie avec colonnes : Vecteur, Description, Mitigation, Statut (actif/éliminé/accepté). Ajouter une note d’introduction expliquant comment lire la matrice. Référencer les ADR pertinentes.
+Contexte physique (limite de Landauer) : effacer un bit d’information coûte au minimum kT·ln(2) ≈ 2.85 × 10⁻²¹ joules à température ambiante. Bruteforcer 2²⁵⁶ clés nécessiterait au minimum ~3.3 × 10⁵⁶ joules — environ 2.75 × 10²² fois la production énergétique annuelle du Soleil. C’est une impossibilité physique, pas computationnelle. La passphrase complète de 158 bits est dans cette zone.
 
 -----
 
-## 2. Créer `doc/RISQUES-RESIDUELS.md`
+## 2. Enrichir `doc/adr/0004-luks-imbrique-passphrase-ext-yubikey-int.md`
 
-Ce fichier liste tous les risques connus et acceptés avec leur justification. C’est la documentation “on sait que c’est un risque et on l’accepte pour cette raison”.
+Ajouter une section “Détail de la vulnérabilité quantique FIDO2” après la section “Décision” :
 
-### Contenu à inclure (9 risques) :
+La YubiKey FIDO2 utilise l’extension hmac-secret pour le déverrouillage LUKS. Le flux est : un sel est stocké dans l’en-tête LUKS (public). Au déverrouillage, la plateforme et la YubiKey établissent un secret partagé via ECDH (Elliptic Curve Diffie-Hellman) pour chiffrer les échanges. La YubiKey calcule un HMAC avec son secret interne et le sel, et renvoie le résultat chiffré via le canal ECDH. Ce résultat sert de clé pour ouvrir le keyslot LUKS.
 
-1. Partition EFI non chiffrée. Contient kernel, initrd, bootloader. Modifiable avec accès physique. Mitigé par vérification depuis macOS + signature kernel + future signature m1n1 stage 2 par Asahi (code Rust en cours).
-1. Clé LUKS en RAM pendant le fonctionnement et en s2idle. Inhérent à dm-crypt. Sous-ensemble strict du risque en fonctionnement normal. Protections : lockdown, DART, SiP. Seul résiduel : exploit kernel 0-day. Shutdown 30 min borne l’exposition. Voir ADR 0002.
-1. Pas d’hibernation. CONFIG_HIBERNATION désactivé sur Asahi ET lockdown le bloque. Évaluée et écartée — modèle s2idle + shutdown formellement justifié. Voir ADR 0002.
-1. Blobs firmware Apple opaques. Non auditables mais compartimentés — chaque blob cantonné à son sous-système. Aucun blob avec accès système total (contrairement à Intel ME qui est un blob monolithique avec accès DMA total à la RAM + réseau). Accepté comme compromis inhérent à la plateforme.
-1. 2FA et non 3FA pour le déverrouillage LUKS (Phase 0). Les keyslots LUKS sont des alternatives (OR), pas des facteurs cumulables (AND). Le vrai multi-facteur nécessite du LUKS imbriqué (Phase 2). Voir ADR 0004.
-1. Bug pcsclite NixOS #329135. L’initrd systemd ne charge pas correctement la bibliothèque pcsclite nécessaire au déverrouillage FIDO2, provoquant un double prompt de PIN. Fonctionnel mais dégradé. À surveiller.
-1. SEP non disponible sous Linux. Pas de Touch ID, pas de chiffrement disque via SEP, pas de stockage de clés hardware côté Linux. Compensé par YubiKey FIDO2 comme facteur hardware externe et par la vérification d’intégrité depuis macOS (qui a accès au SEP).
-1. nixos-rebuild ne vérifie pas les signatures de commits. Fetch + build aveugle. Mitigé par safe-rebuild.sh (convention, pas contrainte technique). Protection ultime : vérification post-reboot macOS + signature kernel SEP. Voir ADR 0007.
-1. Compromission de GitHub. Repo hébergé chez un tiers. Mitigé par vérification de signature (commit injecté ne serait pas signé), –ff-only, log d’audit. Limite : replay d’ancien commit signé non détecté.
+Le HMAC lui-même est symétrique (quantum-safe). Mais le canal ECDH qui protège l’échange est asymétrique (courbes elliptiques). L’algorithme de Shor, sur un ordinateur quantique, casserait l’ECDH en temps polynomial.
 
-### Format attendu :
+C’est un vecteur “Harvest Now, Decrypt Later” (HNDL) : un attaquant qui capture le trafic USB entre le Mac et la YubiKey pendant une session de déverrouillage (par exemple via un keylogger matériel USB-C, ou une compromission du bus USB au niveau kernel) pourrait stocker cet échange chiffré et le déchiffrer rétroactivement quand les ordinateurs quantiques seront opérationnels. Il récupérerait alors le résultat HMAC et pourrait l’utiliser pour déverrouiller le volume LUKS interne sans jamais toucher physiquement la YubiKey.
 
-Liste numérotée avec pour chaque risque : titre, description, justification de l’acceptation, mitigations en place, références aux ADR.
+C’est pour ça que la passphrase (quantum-safe, symétrique) est en couche externe et la YubiKey (quantum-vulnérable via ECDH) en couche interne : l’attaquant post-quantique est bloqué dès la première porte et ne peut même pas accéder au trafic FIDO2 de la couche interne.
+
+Note : le FIDO2 ECDSA n’est PAS un vecteur HNDL pour le LUKS en Phase 0 (LUKS simple, pas imbriqué) car la passphrase protège le volume et il n’y a pas de trafic FIDO2 à intercepter. Le vecteur HNDL ne devient pertinent qu’en Phase 2 quand la YubiKey est ajoutée comme couche de déverrouillage.
 
 -----
 
-## 3. Créer `doc/adr/0010-modele-menace-et-securite-apple-silicon.md`
+## 3. Créer `doc/adr/0013-incident-dfu-sgdisk-lecon.md`
 
-ADR documentant le modèle de menace et le contexte de sécurité hardware. Utilise le template dans .claude/skills/new-adr/SKILL.md.
+ADR documentant l’incident qui a mené au DFU restore. Utilise le template dans .claude/skills/new-adr/SKILL.md.
 
-### Contexte :
+Date : 2026-04-04
+Statut : acceptée (leçon apprise)
 
-Machine utilisée pour des données HDS (santé) avec obligation légale de protection, clés d’infrastructure (VPS, Tailscale, GPU), vault Vaultwarden + Paperless-ngx, profil militant.
+Contexte : Première tentative d’installation de NixOS sur le MacBook Pro M1 Pro via Asahi Linux.
 
-### Menaces classées par priorité :
+Ce qui s’est passé : L’installeur Asahi a correctement redimensionné macOS à 875 Go et créé le stub APFS, la partition EFI, et réservé 108.6 GiB d’espace libre pour NixOS. La table de partition avant l’erreur était : p1 iBoot, p2 macOS, p3 stub Asahi, p4 EFI, p5 RecoveryOS.
 
-1. Compromission du Synology DS918+ (SPOF — toutes les sauvegardes, tous les secrets)
-1. Compromission distante du Mac (exploit réseau, supply chain, malware)
-1. Vol physique du Mac (cambriolage — appartement vide plusieurs fois par jour)
-1. Evil maid (accès physique temporaire — prestataire, visiteur)
-1. Attaque ciblée (profil militant → acteur étatique)
-1. Compromission de la chaîne de build
+La commande `sgdisk /dev/nvme0n1 -n 0:0 -s` a créé une nouvelle partition dans l’espace libre de 108.6 GiB ET retrié toutes les partitions par ordre de secteur de début (flag -s, “sort”). Après le tri : la nouvelle partition (dont les secteurs sont entre p4 et l’ancien RecoveryOS) est devenue p5, et le RecoveryOS a été décalé en p6.
 
-### Contexte hardware Apple Silicon à documenter :
+L’instruction suivante était de formater “p6” en pensant que c’était la nouvelle partition. En réalité p6 était devenu le RecoveryOSContainer (5 Go). NixOS a été installé sur 5 Go au lieu de 108.6 Go.
 
-Chiffrement double couche : Couche 1 = chiffrement matériel permanent (contrôleur de stockage du SoC, clé liée au SoC, toujours actif, protège contre extraction NAND). Couche 2 = FileVault (mot de passe + UID SEP, protège contre vol du Mac complet, DOIT être activé).
+Conséquences : RecoveryOS écrasé par NixOS. Espace insuffisant pour nixos-rebuild switch (5 Go). La partition de 108.6 Go est restée vierge et inutilisée. macOS, iBoot, stub Asahi et EFI intacts.
 
-Cold boot éliminé par la physique : RAM LPDDR5 intégrée au SiP, dessoudage = chaleur = destruction des données.
+L’erreur a mené à un brick du Mac nécessitant un DFU restore complet via Apple Configurator (idevicerestore). Le disque a été entièrement effacé. macOS a été réinstallé de zéro. L’installeur Asahi a été relancé, cette fois avec macOS redimensionné à 372.5 GiB (au lieu de 875 Go), laissant plus d’espace pour NixOS.
 
-Propriétés conservées sous NixOS : boot chain hardware (BootROM → iBoot), Boot Policy SEP pour m1n1 stage 1, isolation firmware (pas de blob type Intel ME), cold boot éliminé.
+Décision : Utiliser gdisk (interactif, écriture seulement sur `w`) au lieu de sgdisk (scriptable, exécution immédiate) pour toute opération de partitionnement. Ne jamais utiliser le flag `-s` (sort). Toujours vérifier avec `p` (print) avant de valider avec `w` (write). Voir ADR 0008 pour la décision formelle.
 
-Propriétés perdues sous NixOS : SSV (pas de vérification d’intégrité continue), SEP pour chiffrement disque (LUKS = clé en RAM), signature ECID, anti-rollback serveur, TCC/App Sandbox/notarisation, Touch ID.
+Leçon : Après toute opération de partitionnement, toujours revérifier quel numéro de partition correspond à quoi avec `sgdisk -p` ou `gdisk` → `p` avant de formater. Les numéros de partition GPT sont des étiquettes arbitraires qui ne correspondent pas nécessairement à l’ordre physique des secteurs.
 
-Chaîne de boot : BootROM (silicium immuable) → iBoot (signé Apple) → m1n1 stage 1 (hash dans Boot Policy SEP, vérifié à chaque boot, modifiable uniquement en 1TR + credentials Machine Owner, code de chainloading en Rust) → m1n1 stage 2 (sur partition EFI FAT32, NON vérifié cryptographiquement actuellement, mis à jour par les distributions, signature prévue par Asahi avec clé publique dans stage 1) → U-Boot → systemd-boot → kernel + initrd → LUKS.
-
-Le trou de sécurité principal est entre stage 1 et stage 2 — le stage 2 est sur une partition non chiffrée et non vérifié. Issue GitHub AsahiLinux/m1n1#195 documente ce vecteur evil maid.
+Ce qui a été sauvé malgré l’incident : configuration.nix et flake.nix poussés sur GitHub (https://github.com/synt-or/infra). Clé SSH ed25519-sk résidente générée dans la YubiKey et ajoutée à GitHub. Ces éléments ont permis de repartir rapidement après le DFU restore.
 
 -----
 
-## 4. Créer `doc/adr/0011-boot-non-chiffrable-fido2.md`
-
-ADR documentant pourquoi /boot ne peut pas être chiffré avec FIDO2.
-
-Triple incompatibilité :
-
-- GRUB et LUKS2 : GRUB ne supporte pas LUKS2 de manière fiable. Or systemd-cryptenroll exige LUKS2.
-- GRUB et FIDO2 : GRUB ne parle pas FIDO2. Le déverrouillage FIDO2 se fait dans l’initrd, après que le kernel est chargé par le bootloader.
-- Asahi et systemd-boot : le setup Asahi utilise systemd-boot via U-Boot, pas GRUB. systemd-boot ne supporte pas le déchiffrement de /boot.
-
-Conséquence acceptée : kernel et initrd exposés sur partition EFI. Surface d’attaque résiduelle couverte par vérification des hashes depuis macOS et signature kernel avec clé SEP.
-
-Résolution potentielle à terme : Lanzaboote avec Unified Kernel Images (UKI) signées — kernel, initrd, bootloader dans un seul binaire signé. Compatibilité Asahi à valider.
-
------
-
-## 5. Créer `doc/adr/0012-yubikey-bio-fido-edition.md`
-
-ADR documentant le choix de la YubiKey Bio FIDO Edition.
-
-La YubiKey Bio existe en deux variantes :
-
-- FIDO Edition : FIDO2 + U2F uniquement. En vente libre (~90-100€). Suffit pour LUKS FIDO2, SSH sk résident, passkeys, signature de commits Git.
-- Multi-protocol Edition : FIDO2 + U2F + PIV/smart card. Disponible exclusivement via YubiKey as a Service (abonnement entreprise). Ajoute certificats X.509, authentification Windows smart card, VPN client-certificate.
-
-Décision : FIDO Edition. Le PIV/smart card n’a pas de use case identifié (pas de PKI entreprise, pas d’Active Directory, pas de S/MIME). SSH sk résidentes permettent de signer des commits Git sans GPG (Git 2.34+, gpg.format = ssh). Le seul scénario où PIV manquerait : stocker la clé de signature kernel directement sur la YubiKey au lieu du SEP macOS — nice-to-have, pas bloquant.
-
------
-
-## 6. Mettre à jour `CLAUDE.md`
-
-Ajouter dans la section pièges de sécurité ou en bas du fichier :
-
-```
-Matrice d'attaque complète dans @doc/MATRICE-ATTAQUE.md
-Risques résiduels acceptés dans @doc/RISQUES-RESIDUELS.md
-```
-
------
-
-## Règles pour la création
+## Règles
 
 - Écrire en français
-- Utiliser le template ADR de .claude/skills/new-adr/SKILL.md pour les ADR
-- Les tableaux doivent avoir des colonnes alignées
-- Référencer les ADR pertinentes quand c’est approprié (liens entre documents)
-- Pas de contenu dupliqué entre les fichiers — chaque information vit à un seul endroit avec des références croisées
+- Pour les ADR, utiliser le template de .claude/skills/new-adr/SKILL.md
+- Pour les enrichissements d’ADR existantes : ajouter les nouvelles sections sans modifier le contenu existant (respecter le principe d’immutabilité des ADR sauf ajout de contexte)
 - Commit signé avec message descriptif
