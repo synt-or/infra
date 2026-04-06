@@ -65,6 +65,7 @@
     # Pour ajouter Claude Code au $PATH
     environment.sessionVariables = {
       PATH = [ "$HOME/.local/bin" ];
+      CLAUDE_CODE_TASK_LIST_ID = "infra";
     };
 
 
