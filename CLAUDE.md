@@ -56,4 +56,6 @@ Si `git commit` échoue avec “Couldn’t find key in agent”, vérifier `ssh-
 1. Migration Synology (Vaultwarden, Paperless-ngx, sauvegardes)
 1. Extension infrastructure (Hetzner, deploy-rs, YubiKey Bio)
 
+Matrice d'attaque complète dans @doc/MATRICE-ATTAQUE.md
+Risques résiduels acceptés dans @doc/RISQUES-RESIDUELS.md
 Détails dans @TODO.md. Décisions architecturales dans @doc/adr/
