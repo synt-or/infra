@@ -47,13 +47,23 @@
   nixpkgs.config.allowUnfree = true;
 
   # Paquets
-	environment.systemPackages = with pkgs; [
+  environment.systemPackages = with pkgs; [
     git
     vim
+    bat
+    ripgrep
+    fd
   ];
 
-	# Pour permettre la compatibilité avec les vinaires compilés FHS
-	programs.nix-ld.enable = true; 
+  # Pour permettre la compatibilité avec les binaires compilés FHS
+  programs.nix-ld.enable = true; 
+
+  # Variables de session
+    # Pour ajouter Claude Code au $PATH
+    environement.sessionVaribales = {
+      PATH = [ "$HOME/.local/bin" ];
+    };
+
 
   # SSH serveur
   services.openssh = {
@@ -64,7 +74,7 @@
     };
   };
 
-  # SSH client — stub YubiKey sk résidente placé déclarativement
+  # SSH client — stub YubiKey sk résidente placé déclarativement (à nixifier)
   system.activationScripts.sshStub = ''
     mkdir -p /home/lambda/.ssh
     cp ${./ssh/id_ed25519_sk_rk} /home/lambda/.ssh/id_ed25519_sk_rk
