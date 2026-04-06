@@ -15,7 +15,7 @@
       "Bash(grep *)",
       "Bash(find *)",
       "Bash(nix flake check)",
-      "Bash(nix eval *)",
+      "Bash(nix eval .#*)",
       "Bash(nix-instantiate --parse *)",
       "Bash(git status)",
       "Bash(git diff *)",
