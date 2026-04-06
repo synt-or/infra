@@ -63,7 +63,7 @@
 
   # Variables de session
     # Pour ajouter Claude Code au $PATH
-    environement.sessionVaribales = {
+    environment.sessionVaribales = {
       PATH = [ "$HOME/.local/bin" ];
     };
 
