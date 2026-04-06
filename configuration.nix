@@ -92,6 +92,15 @@
     fi
   '';
 
+  # Ajout automatique des clés SSH à l'agent au chargement d'un terminal
+  programs.bash.interactiveShellInit = ''
+    ssh-add -l | grep -q 'id_ed25519_sk_rk' 2>/dev/null || ssh-add ~/.ssh/id_ed25519_sk_rk 2>/dev/null
+  '';
+
+  # Ajout de la fonction UndistractMe au terminal
+  programs.bash.undistractMe.enable = true;
+
+
   # SSH agent
   programs.ssh.startAgent = true;
 
