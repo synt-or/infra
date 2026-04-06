@@ -117,6 +117,8 @@
       user.signingKey = "key::sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29tAAAAIIxIpGAQxp4EFzLAqYrKnjY5BFyYqPGFhLPZ6v907PJ3AAAABHNzaDo= ssh:";
       commit.gpgsign = true;
       init.defaultBranch = "main";
+      core.editor = "vim";
+      pull.rebase = "false";
     };
   };
 
