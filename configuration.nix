@@ -1,4 +1,4 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, claude-code, ... }:
 
 {
   imports =
@@ -95,23 +95,21 @@
   nixpkgs.config.allowUnfree = true;
 
   # Paquets
-  environment.systemPackages = with pkgs; [
+  environment.systemPackages = (with pkgs; [
     git
     vim
     bat
     ripgrep
     fd
+    tmux
+  ]) ++ [
+    claude-code
   ];
 
-  # Pour permettre la compatibilité avec les binaires compilés FHS
-  programs.nix-ld.enable = true; 
-
   # Variables de session
-    # Pour ajouter Claude Code au $PATH
-    environment.sessionVariables = {
-      PATH = [ "$HOME/.local/bin" ];
-      CLAUDE_CODE_TASK_LIST_ID = "infra";
-    };
+  environment.sessionVariables = {
+    CLAUDE_CODE_TASK_LIST_ID = "infra";
+  };
 
 
   # SSH serveur — hardened

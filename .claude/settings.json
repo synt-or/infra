@@ -24,6 +24,9 @@
       "Bash(git branch *)",
       "Bash(nixos-option *)"
     ],
+    "ask": [
+      "Bash(curl *)"
+    ],
     "deny": [
       "Bash(rm -rf *)",
       "Bash(dd *)",
@@ -35,7 +38,6 @@
       "Bash(fdisk *)",
       "Bash(parted *)",
       "Bash(wipefs *)",
-      "Bash(curl *)",
       "Bash(wget *)",
       "Bash(git push --force *)",
       "Bash(git reset --hard *)",

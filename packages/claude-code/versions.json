@@ -1,0 +1,7 @@
+{
+  "version": "2.1.92",
+  "platform": "linux-arm64",
+  "binarySri": "sha256-CN6z1WR3SW65LmJPSS4lsSP0Un3VZ09xr/9YpI7M2VM=",
+  "manifestSri": "sha256-Niq+V2iNM4m7l+R7wXE3M8xfCWNHJsQmTAxq0HQ3hY8=",
+  "manifestSigSri": "sha256-qu9MXzCdTQh+U73l+4c/R0T0GXE7WvfDRI+NwD15m5A="
+}
