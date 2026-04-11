@@ -29,6 +29,20 @@
   boot.initrd.systemd.emergencyAccess = true;
 
   # Hardening — Phase 1
+  # Lockdown LSM (désactivé dans nixpkgs upstream pour reproductibilité — MODULE_SIG génère une clé random par build)
+  # Pré-builder de nuit : nix build /data/infra#nixosConfigurations.nixos.config.system.build.toplevel
+  boot.kernelPatches = [
+    {
+      name = "enable-lockdown-lsm";
+      patch = null;
+      extraConfig = ''
+        SECURITY_LOCKDOWN_LSM y
+        SECURITY_LOCKDOWN_LSM_EARLY y
+        MODULE_SIG y
+        MODULE_SIG_FORCE y
+      '';
+    }
+  ];
   boot.kernelParams = [ "lockdown=confidentiality" ];
   security.protectKernelImage = true;
   boot.kernel.sysctl = {
