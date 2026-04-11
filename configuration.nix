@@ -211,7 +211,8 @@
     isNormalUser = true;
     extraGroups = [ "wheel" "plugdev" ];
     openssh.authorizedKeys.keys = [
-      "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBI/eFj3EA31vrOmiTQ0euOP2IjjdL+3YyWMT51ZJE3LqO0P0eiqrKQtIcQQ7Nm+wvI0JBQqMexkrNTOZ6UChGPE="
+      "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBI/eFj3EA31vrOmiTQ0euOP2IjjdL+3YyWMT51ZJE3LqO0P0eiqrKQtIcQQ7Nm+wvI0JBQqMexkrNTOZ6UChGPE=" # Termius classique
+      "sk-ecdsa-sha2-nistp256@openssh.com AAAAInNrLWVjZHNhLXNoYTItbmlzdHAyNTZAb3BlbnNzaC5jb20AAAAIbmlzdHAyNTYAAABBBO5cGu6GEEmtygJFLlJiXkXYIo4D26wl0uEcXBENyXSXhV12f07QPRab1kQjVNnXRpFuPiw/yatEz4y584+MATgAAAALdGVybWl1cy5jb20=" # Termius sk (YubiKey NFC)
     ];
   };
 
