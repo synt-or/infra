@@ -151,15 +151,12 @@
     AddKeysToAgent yes
   '';
 
-  # SSH client — stub YubiKey sk résidente (copie impérative, à remplacer par tmpfiles.rules en 1.16)
-  system.activationScripts.sshStub = ''
-    mkdir -p /home/lambda/.ssh
-    cp ${./ssh/id_ed25519_sk_rk} /home/lambda/.ssh/id_ed25519_sk_rk
-    cp ${./ssh/id_ed25519_sk_rk.pub} /home/lambda/.ssh/id_ed25519_sk_rk.pub
-    chmod 600 /home/lambda/.ssh/id_ed25519_sk_rk
-    chmod 644 /home/lambda/.ssh/id_ed25519_sk_rk.pub
-    chown -R lambda:users /home/lambda/.ssh
-  '';
+  # SSH client — stub YubiKey sk résidente (pointeur vers la clé hardware)
+  systemd.tmpfiles.rules = [
+    "d /home/lambda/.ssh 0700 lambda users -"
+    "C /home/lambda/.ssh/id_ed25519_sk_rk 0600 lambda users - ${./ssh/id_ed25519_sk_rk}"
+    "C /home/lambda/.ssh/id_ed25519_sk_rk.pub 0644 lambda users - ${./ssh/id_ed25519_sk_rk.pub}"
+  ];
 
   # Ajout automatique des clés SSH à l'agent au chargement d'un terminal
   programs.bash.interactiveShellInit = ''
