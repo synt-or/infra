@@ -125,6 +125,11 @@
     claude-code
   ];
 
+  # Alias shell
+  environment.shellAliases = {
+    rebuild = "/data/infra/scripts/safe-rebuild.sh";
+  };
+
   # Variables de session
   environment.sessionVariables = {
     CLAUDE_CODE_TASK_LIST_ID = "infra";
@@ -153,10 +158,12 @@
   '';
 
   # SSH client — stub YubiKey sk résidente (pointeur vers la clé hardware)
+  # Log d'audit safe-rebuild.sh (append-only par root)
   systemd.tmpfiles.rules = [
     "d /home/lambda/.ssh 0700 lambda users -"
     "C /home/lambda/.ssh/id_ed25519_sk_rk 0600 lambda users - ${./ssh/id_ed25519_sk_rk}"
     "C /home/lambda/.ssh/id_ed25519_sk_rk.pub 0644 lambda users - ${./ssh/id_ed25519_sk_rk.pub}"
+    "f /var/log/nixos-rebuild-audit.log 0600 root root -"
   ];
 
   # Ajout automatique des clés SSH à l'agent au chargement d'un terminal
@@ -183,6 +190,8 @@
       init.defaultBranch = "main";
       core.editor = "vim";
       pull.rebase = "false";
+      pull.ff = "only";
+      gpg.ssh.allowedSignersFile = "/data/infra/.allowed_signers";
     };
   };
 
