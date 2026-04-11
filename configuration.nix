@@ -202,6 +202,31 @@
   users.groups.plugdev = {};
   
 
+  # Pré-build nocturne du kernel (recompilation lockdown LSM)
+  systemd.services.nix-prebuild-kernel = {
+    description = "Pre-build NixOS system (kernel custom lockdown LSM)";
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart = "${pkgs.nix}/bin/nix build /data/infra#nixosConfigurations.nixos.config.system.build.toplevel --no-link";
+      User = "lambda";
+      Nice = 19;
+      CPUQuota = "400%";
+      IOSchedulingClass = "idle";
+      IOSchedulingPriority = 7;
+    };
+  };
+  systemd.timers.nix-prebuild-kernel = {
+    wantedBy = [ "timers.target" ];
+    timerConfig = {
+      OnCalendar = "*-*-* 03:00";
+      Persistent = true;
+      Unit = "nix-prebuild-kernel.service";
+    };
+    unitConfig = {
+      ConditionACPower = true;
+    };
+  };
+
   # Firmware Asahi
   hardware.asahi.peripheralFirmwareDirectory = ./firmware;
 
