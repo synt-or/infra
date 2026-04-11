@@ -2,5 +2,6 @@ keycode 41 = at numbersign
 keycode 43 = grave asciitilde
 altgr keycode 49 = asciitilde
 altgr keycode 38 = bar
+shift altgr keycode 38 = bar
 shift keycode 27 = asterisk
 altgr keycode 27 = U+20AC
