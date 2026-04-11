@@ -85,9 +85,20 @@
   # Firewall strict — tout fermé par défaut
   networking.firewall = {
     enable = true;
-    # SSH ouvert — à restreindre à l'interface Tailscale en Phase 1.8
-    allowedTCPPorts = [ 22 ];
+    # Phase 1.8 : SSH restreint à l'interface Tailscale uniquement
+    allowedTCPPorts = [ ];
     allowedUDPPorts = [ ];
+    # Pas de trustedInterfaces — principe du moindre privilège (ADR 0015)
+    interfaces.tailscale0.allowedTCPPorts = [ 22 ];
+  };
+
+  # Tailscale VPN — Phase 1.8 (ADR 0015)
+  # Auth impérative : `sudo tailscale up` (pas de secret dans le repo)
+  services.tailscale = {
+    enable = true;
+    openFirewall = true;           # UDP 41641 pour connexions WireGuard directes
+    useRoutingFeatures = "none";   # Pas d'exit node ni subnet router
+    disableUpstreamLogging = true; # Pas de logs envoyés à Tailscale (HDS)
   };
 
   # Hostname
