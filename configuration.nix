@@ -227,6 +227,33 @@
     };
   };
 
+  # Gestion d'énergie — s2idle + shutdown auto (ADR 0002)
+  # Fermeture couvercle → s2idle (seul mode dispo Asahi, défaut logind)
+  # Après 30 min en s2idle → shutdown (clé LUKS disparaît de la RAM)
+  systemd.services.sleep-auto-shutdown = {
+    description = "Auto-shutdown after prolonged sleep";
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart = "${pkgs.systemd}/bin/systemctl poweroff";
+    };
+  };
+  systemd.timers.sleep-auto-shutdown = {
+    timerConfig = {
+      OnActiveSec = "30min";
+    };
+  };
+  systemd.services.sleep-shutdown-hook = {
+    description = "Start/stop auto-shutdown timer on sleep/wake";
+    wantedBy = [ "sleep.target" ];
+    before = [ "sleep.target" ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      ExecStart = "${pkgs.systemd}/bin/systemctl start sleep-auto-shutdown.timer";
+      ExecStop = "${pkgs.systemd}/bin/systemctl stop sleep-auto-shutdown.timer";
+    };
+  };
+
   # Firmware Asahi
   hardware.asahi.peripheralFirmwareDirectory = ./firmware;
 
