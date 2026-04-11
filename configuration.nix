@@ -45,6 +45,10 @@
   ];
   boot.kernelParams = [ "lockdown=confidentiality" ];
   security.protectKernelImage = true;
+  # Charger les modules nécessaires au boot AVANT le lock (modules_disabled=1)
+  # Ajouter ici les modules pour Docker/Podman quand ils seront configurés : bridge veth overlay br_netfilter
+  boot.kernelModules = [ "wireguard" "fuse" "exfat" ];
+  security.lockKernelModules = true;
   boot.kernel.sysctl = {
     # Désactiver Magic SysRq (compatible avec lockdown)
     "kernel.sysrq" = 0;
