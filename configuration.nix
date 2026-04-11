@@ -120,6 +120,7 @@
     ripgrep
     fd
     tmux
+    btop
   ]) ++ [
     claude-code
   ];
